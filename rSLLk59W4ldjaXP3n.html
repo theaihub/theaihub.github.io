@@ -1,0 +1,296 @@
+<html><head><base href="." target="_blank" />
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #f0f0f0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin: 20px;
+    }
+
+    h1 {
+        color: #333;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+
+    #toolbar {
+        background: white;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+
+    canvas {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        cursor: crosshair;
+    }
+
+    .tool-group {
+        display: inline-block;
+        margin: 0 10px;
+        vertical-align: middle;
+    }
+
+    button {
+        padding: 8px 15px;
+        margin: 0 5px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        background: #4CAF50;
+        color: white;
+        transition: all 0.3s ease;
+    }
+
+    button:hover {
+        background: #45a049;
+        transform: scale(1.05);
+    }
+
+    input[type="color"] {
+        width: 50px;
+        height: 30px;
+        cursor: pointer;
+    }
+
+    input[type="range"] {
+        width: 100px;
+        vertical-align: middle;
+    }
+
+    .rainbow-btn {
+        background: linear-gradient(to right, red, orange, yellow, green, blue, indigo, violet);
+        color: white;
+        font-weight: bold;
+    }
+
+    #size-label {
+        margin-left: 10px;
+    }
+
+    .brush-btn {
+        background: #2196F3;
+    }
+
+    .brush-btn.active {
+        background: #1976D2;
+        transform: scale(1.05);
+    }
+</style>
+</head>
+<body>
+    <h1>✨ ArtCanvas Studio ✨</h1>
+    <div id="toolbar">
+        <div class="tool-group">
+            <input type="color" id="colorPicker" value="#000000">
+            <button class="rainbow-btn" id="rainbowMode">🌈 Rainbow</button>
+        </div>
+        <div class="tool-group">
+            <button class="brush-btn" id="roundBrush">🖌️ Round</button>
+            <button class="brush-btn" id="squareBrush">⬜ Square</button>
+            <button class="brush-btn" id="sprayBrush">💨 Spray</button>
+            <button class="brush-btn" id="neonBrush">✨ Neon</button>
+        </div>
+        <div class="tool-group">
+            <input type="range" id="brushSize" min="1" max="50" value="5">
+            <span id="size-label">Size: 5px</span>
+        </div>
+        <div class="tool-group">
+            <button id="undo">↩️ Undo</button>
+            <button id="redo">↪️ Redo</button>
+            <button id="clear">🗑️ Clear</button>
+            <button id="save">💾 Save</button>
+        </div>
+    </div>
+    <canvas id="canvas" width="800" height="600"></canvas>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const colorPicker = document.getElementById('colorPicker');
+const rainbowBtn = document.getElementById('rainbowMode');
+const brushSize = document.getElementById('brushSize');
+const sizeLabel = document.getElementById('size-label');
+const undoBtn = document.getElementById('undo');
+const redoBtn = document.getElementById('redo');
+const clearBtn = document.getElementById('clear');
+const saveBtn = document.getElementById('save');
+
+let isDrawing = false;
+let isRainbowMode = false;
+let lastX = 0;
+let lastY = 0;
+let hue = 0;
+let undoStack = [];
+let redoStack = [];
+let currentBrush = 'round';
+
+// Initialize canvas with white background
+ctx.fillStyle = 'white';
+ctx.fillRect(0, 0, canvas.width, canvas.height);
+saveState();
+
+function saveState() {
+    undoStack.push(canvas.toDataURL());
+    redoStack = [];
+}
+
+function setActiveBrush(brushType) {
+    document.querySelectorAll('.brush-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(`${brushType}Brush`).classList.add('active');
+    currentBrush = brushType;
+}
+
+function drawSpray(x, y) {
+    const density = 50;
+    const radius = brushSize.value;
+    
+    for(let i = 0; i < density; i++) {
+        const angle = Math.random() * 360;
+        const rad = Math.random() * radius;
+        const sprayX = x + rad * Math.cos(angle);
+        const sprayY = y + rad * Math.sin(angle);
+        
+        ctx.beginPath();
+        ctx.arc(sprayX, sprayY, 0.5, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+function drawNeon(x, y) {
+    const originalGlobalCompositeOperation = ctx.globalCompositeOperation;
+    const originalShadowColor = ctx.shadowColor;
+    const originalShadowBlur = ctx.shadowBlur;
+    
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.shadowColor = ctx.strokeStyle;
+    ctx.shadowBlur = 15;
+    
+    ctx.beginPath();
+    ctx.moveTo(lastX, lastY);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    
+    ctx.globalCompositeOperation = originalGlobalCompositeOperation;
+    ctx.shadowColor = originalShadowColor;
+    ctx.shadowBlur = originalShadowBlur;
+}
+
+function draw(e) {
+    if (!isDrawing) return;
+    
+    ctx.lineWidth = brushSize.value;
+    ctx.lineCap = currentBrush === 'square' ? 'butt' : 'round';
+    ctx.lineJoin = currentBrush === 'square' ? 'miter' : 'round';
+
+    if (isRainbowMode) {
+        hue = (hue + 1) % 360;
+        ctx.strokeStyle = ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+    } else {
+        ctx.strokeStyle = ctx.fillStyle = colorPicker.value;
+    }
+
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    switch(currentBrush) {
+        case 'spray':
+            drawSpray(x, y);
+            break;
+        case 'neon':
+            drawNeon(x, y);
+            break;
+        default:
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+    }
+
+    [lastX, lastY] = [x, y];
+}
+
+// Event Listeners for brush types
+document.getElementById('roundBrush').addEventListener('click', () => setActiveBrush('round'));
+document.getElementById('squareBrush').addEventListener('click', () => setActiveBrush('square'));
+document.getElementById('sprayBrush').addEventListener('click', () => setActiveBrush('spray'));
+document.getElementById('neonBrush').addEventListener('click', () => setActiveBrush('neon'));
+
+// Set round brush as default active
+setActiveBrush('round');
+
+canvas.addEventListener('mousedown', (e) => {
+    isDrawing = true;
+    const rect = canvas.getBoundingClientRect();
+    [lastX, lastY] = [e.clientX - rect.left, e.clientY - rect.top];
+});
+
+canvas.addEventListener('mousemove', draw);
+canvas.addEventListener('mouseup', () => {
+    if (isDrawing) {
+        isDrawing = false;
+        saveState();
+    }
+});
+canvas.addEventListener('mouseout', () => {
+    if (isDrawing) {
+        isDrawing = false;
+        saveState();
+    }
+});
+
+rainbowBtn.addEventListener('click', () => {
+    isRainbowMode = !isRainbowMode;
+    rainbowBtn.style.opacity = isRainbowMode ? '0.7' : '1';
+});
+
+brushSize.addEventListener('input', () => {
+    sizeLabel.textContent = `Size: ${brushSize.value}px`;
+});
+
+undoBtn.addEventListener('click', () => {
+    if (undoStack.length > 1) {
+        redoStack.push(undoStack.pop());
+        const img = new Image();
+        img.src = undoStack[undoStack.length - 1];
+        img.onload = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0);
+        };
+    }
+});
+
+redoBtn.addEventListener('click', () => {
+    if (redoStack.length > 0) {
+        const img = new Image();
+        img.src = redoStack[redoStack.length - 1];
+        img.onload = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0);
+            undoStack.push(redoStack.pop());
+        };
+    }
+});
+
+clearBtn.addEventListener('click', () => {
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    saveState();
+});
+
+saveBtn.addEventListener('click', () => {
+    const link = document.createElement('a');
+    link.download = 'artcanvas-masterpiece.png';
+    link.href = canvas.toDataURL('image/png');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+});
+</script>
+</body></html>
