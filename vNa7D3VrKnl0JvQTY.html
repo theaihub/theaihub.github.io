@@ -1,0 +1,231 @@
+<html><head><base href="." />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spot the Bot! Social Media Game</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #f0f2f5;
+    }
+
+    .header {text-align: center; margin-bottom: 20px;}
+
+    .score-board {
+      display: flex;
+      justify-content: space-around;
+      background: white;
+      padding: 10px;
+      border-radius: 10px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+
+    .post {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      animation: slideIn 0.5s ease-out;
+    }
+
+    @keyframes slideIn {
+      from {transform: translateY(50px); opacity: 0;}
+      to {transform: translateY(0); opacity: 1;}
+    }
+
+    .profile {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .profile-pic {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      margin-right: 10px;
+      object-fit: cover;
+    }
+
+    .post-image {
+      width: 100%;
+      max-height: 400px;
+      object-fit: cover;
+      border-radius: 10px;
+      margin: 10px 0;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    button {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.3s ease;
+    }
+
+    .person-btn {background: #4CAF50; color: white;}
+    .bot-btn {background: #f44336; color: white;}
+    button:hover {transform: scale(1.05);}
+
+    .feedback {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 5px;
+      text-align: center;
+      display: none;
+    }
+
+    .correct {background: #4CAF50; color: white;}
+    .incorrect {background: #f44336; color: white;}
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🤖 Spot the Bot!</h1>
+    <p>Can you tell if these posts are from real people or bots/scammers?</p>
+  </div>
+
+  <div class="score-board">
+    <div>Score: <span id="score">0</span></div>
+    <div>Streak: <span id="streak">0</span></div>
+  </div>
+
+  <div id="post-container"></div>
+
+  <script>
+    const posts = [
+      {
+        username: "TechEnthusiast92",
+        content: "Just got my new iPhone 14! The camera quality is amazing! #technology #apple",
+        isBot: false,
+        timestamp: "2 hours ago",
+        profilePic: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><rect width='40' height='40' fill='%234267B2'/><text x='50%' y='50%' text-anchor='middle' dy='.3em' fill='white' font-size='20'>T</text></svg>",
+        image: "https://images.unsplash.com/photo-1678908470117-93d56ef5c727?auto=format&fit=crop&w=600&h=400"
+      },
+      {
+        username: "Make$Money$Fast",
+        content: "🔥 EARN $5000 DAILY FROM HOME! 💰 Click here to learn my secret method! No experience needed! DM me now! 🚀",
+        isBot: true,
+        timestamp: "5 minutes ago",
+        profilePic: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><rect width='40' height='40' fill='%23e74c3c'/><text x='50%' y='50%' text-anchor='middle' dy='.3em' fill='white' font-size='20'>$</text></svg>",
+        image: "https://images.unsplash.com/photo-1559526324-593bc073d938?auto=format&fit=crop&w=600&h=400"
+      },
+      {
+        username: "CoffeeAndBooks",
+        content: "Rainy Sunday morning with my favorite novel and a hot cup of coffee. Perfect way to start the day! ☕📚",
+        isBot: false,
+        timestamp: "1 hour ago",
+        profilePic: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><rect width='40' height='40' fill='%23795548'/><text x='50%' y='50%' text-anchor='middle' dy='.3em' fill='white' font-size='20'>C</text></svg>",
+        image: "https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=600&h=400"
+      },
+      {
+        username: "TravelBlogger_Emma",
+        content: "Exploring the hidden gems of Paris! Can't believe I found this cute little café 🇫🇷 #wanderlust",
+        isBot: false,
+        timestamp: "3 hours ago",
+        profilePic: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><rect width='40' height='40' fill='%23009688'/><text x='50%' y='50%' text-anchor='middle' dy='.3em' fill='white' font-size='20'>E</text></svg>",
+        image: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=600&h=400"
+      },
+      {
+        username: "Crypto_Wealth_XXX",
+        content: "📈 URGENT!!! Bitcoin secret strategy revealed! Turn $100 into $10,000 in just 24 hours! Limited time offer! Contact now! 💎",
+        isBot: true,
+        timestamp: "1 minute ago",
+        profilePic: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><rect width='40' height='40' fill='%23f39c12'/><text x='50%' y='50%' text-anchor='middle' dy='.3em' fill='white' font-size='20'>₿</text></svg>",
+        image: "https://images.unsplash.com/photo-1621761311508-1e85c6159293?auto=format&fit=crop&w=600&h=400"
+      },
+      {
+        username: "FoodieAdventures",
+        content: "Made this amazing homemade pasta from scratch! Recipe in comments below 🍝 #homecooking",
+        isBot: false,
+        timestamp: "4 hours ago",
+        profilePic: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><rect width='40' height='40' fill='%23FF5722'/><text x='50%' y='50%' text-anchor='middle' dy='.3em' fill='white' font-size='20'>F</text></svg>",
+        image: "https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=600&h=400"
+      },
+      {
+        username: "LuxuryWatches_Deals",
+        content: "⌚️ FAKE ROLEX WATCHES - LOOK REAL! 80% OFF! Buy now before price increases! WhatsApp +123456789 🔥",
+        isBot: true,
+        timestamp: "30 minutes ago",
+        profilePic: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><rect width='40' height='40' fill='%23607D8B'/><text x='50%' y='50%' text-anchor='middle' dy='.3em' fill='white' font-size='20'>L</text></svg>",
+        image: "https://images.unsplash.com/photo-1587836374828-4dbafa94cf0e?auto=format&fit=crop&w=600&h=400"
+      },
+      {
+        username: "PetLover_Sarah",
+        content: "Look who just learned a new trick! So proud of my furry best friend 🐕 #dogsofinstagram",
+        isBot: false,
+        timestamp: "6 hours ago",
+        profilePic: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><rect width='40' height='40' fill='%239C27B0'/><text x='50%' y='50%' text-anchor='middle' dy='.3em' fill='white' font-size='20'>P</text></svg>",
+        image: "https://images.unsplash.com/photo-1534361960057-19889db9621e?auto=format&fit=crop&w=600&h=400"
+      }
+    ];
+
+    let currentPostIndex = 0;
+    let score = 0;
+    let streak = 0;
+
+    function createPost(post) {
+      return `
+        <div class="post">
+          <div class="profile">
+            <img src="${post.profilePic}" class="profile-pic" alt="${post.username}'s profile">
+            <div>
+              <strong>${post.username}</strong>
+              <div style="color: #65676b; font-size: 0.9em;">${post.timestamp}</div>
+            </div>
+          </div>
+          <div class="content">${post.content}</div>
+          <img src="${post.image}" class="post-image" alt="Post image">
+          <div class="buttons">
+            <button class="person-btn" onclick="checkAnswer(false)">👤 Real Person</button>
+            <button class="bot-btn" onclick="checkAnswer(true)">🤖 Bot/Scam</button>
+          </div>
+          <div class="feedback" id="feedback"></div>
+        </div>
+      `;
+    }
+
+    function checkAnswer(isBot) {
+      const currentPost = posts[currentPostIndex];
+      const feedback = document.querySelector('#feedback');
+      const isCorrect = isBot === currentPost.isBot;
+
+      if (isCorrect) {
+        score += 10;
+        streak++;
+        feedback.textContent = "Correct! +10 points";
+        feedback.className = "feedback correct";
+      } else {
+        streak = 0;
+        feedback.textContent = "Wrong! That was " + (currentPost.isBot ? "a bot" : "a real person");
+        feedback.className = "feedback incorrect";
+      }
+
+      feedback.style.display = "block";
+      document.querySelector('#score').textContent = score;
+      document.querySelector('#streak').textContent = streak;
+
+      setTimeout(() => {
+        currentPostIndex = (currentPostIndex + 1) % posts.length;
+        document.getElementById('post-container').innerHTML = createPost(posts[currentPostIndex]);
+      }, 1500);
+    }
+
+    // Shuffle posts array
+    posts.sort(() => Math.random() - 0.5);
+    
+    // Initialize first post
+    document.getElementById('post-container').innerHTML = createPost(posts[0]);
+  </script>
+</body></html>
